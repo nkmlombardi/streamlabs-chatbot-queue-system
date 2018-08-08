@@ -1,0 +1,73 @@
+﻿{
+    "output_file": "QueueConfig.json",
+
+    "openReadMe": {
+        "type": "button",
+        "label": "Open Readme.txt",
+        "tooltip": "Opens the 'Readme.txt' for this script.",
+        "function": "OpenReadMe",
+        "wsevent": "",
+        "group": ""
+    },
+    "permission": {
+        "type": "dropdown",
+        "value": "Everyone",
+        "items": ["Everyone","Regular","Subscriber","Moderator"],
+        "label": "Permission level",
+        "tooltip": "Set the permission level for the command",
+        "group": ""
+    },
+
+    "title": {
+        "type": "textbox",
+        "value": "Subscriber Sundays",
+        "label": "Title of the event that the queue is starting for.",
+        "tooltip": "Set the title for this queue.",
+        "group": ""
+    },
+
+
+    "host": {
+        "type": "textbox",
+        "value": "In-game name of host",
+        "label": "The host's in game name player's should be notified of.",
+        "tooltip": "The host's in game name player's should be notified of.",
+        "group": ""
+    },
+
+    "useCooldown": {
+        "type": "checkbox",
+        "value": false,
+        "label": "Use Cooldown Messages",
+        "tooltip": "Enable/Disable cooldown messages",
+        "group": "Cooldown"
+    },
+    "cooldown": {
+        "type": "numberbox",
+        "label": "Cooldown (seconds)",
+        "value": 120,
+        "tooltip": "Cooldown in seconds.",
+        "group": "Cooldown"
+    },
+    "onCooldown": {
+        "type": "textbox",
+        "value": "$user, the command is still on cooldown for $cd seconds!",
+        "label": "Cooldown Response",
+        "tooltip": "The message that the bot will display when the command is on cooldown. \r\n {0} = user \r\n {1} = time remaining",
+        "group": "Cooldown"
+    },
+    "userCooldown": {
+        "type": "numberbox",
+        "label": "User Cooldown (seconds)",
+        "value": 120,
+        "tooltip": "User cooldown in seconds.",
+        "group": "Cooldown"
+    },
+    "onUserCooldown": {
+        "type": "textbox",
+        "value": "$user the command is still on user cooldown for $cd seconds!",
+        "label": "User Cooldown Response",
+        "tooltip": "The message that the bot will display when the command is on user cooldown. \r\n {0} = user \r\n {1} = time remaining",
+        "group": "Cooldown"
+    }
+}
