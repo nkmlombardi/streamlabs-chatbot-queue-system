@@ -1,6 +1,6 @@
 ﻿var settings = {
   "permission": "Everyone",
-  "title": "Subscriber Mondays",
+  "title": "Subscriber Tuesdays",
   "useCooldown": false,
   "cooldown": 120,
   "onCooldown": "$user, the command is still on cooldown for $cd seconds!",

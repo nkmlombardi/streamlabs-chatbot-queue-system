@@ -9,6 +9,8 @@ import random
 import ctypes
 import codecs
 import time
+import codecs
+import io
 
 
 #---------------------------------------
@@ -30,6 +32,7 @@ responses = []
 queue = []
 playing = []
 active = False
+iteration = 0
 
 
 #---------------------------------------
@@ -39,6 +42,7 @@ defaultSettings = {
     "commands": {
         "start": "!start",
         "end": "!end",
+        "pause": "!pause",
         "join": "!join",
         "list": "!list",
         "wager": "!wager",
@@ -158,9 +162,21 @@ def Execute(data):
                 tempResponseString = tempResponseString.replace("$title", settings['title'])
                 Parent.SendTwitchMessage(tempResponseString)
 
+            # COMMAND: PAUSE
+            elif active and data.GetParam(0).lower() == settings["commands"]["pause"]:
+                active = False
+                tempResponseString = settings["responseQueueEnded"]
+                tempResponseString = tempResponseString.replace("$moderator", user)
+                tempResponseString = tempResponseString.replace("$title", settings['title'])
+                Parent.SendTwitchMessage(tempResponseString)
+
             # COMMAND: END
             elif data.GetParam(0).lower() == settings["commands"]["end"]:
                 active = False
+
+                queue = []
+                playing = []
+
                 tempResponseString = settings["responseQueueEnded"]
                 tempResponseString = tempResponseString.replace("$moderator", user)
                 tempResponseString = tempResponseString.replace("$title", settings['title'])
@@ -168,27 +184,41 @@ def Execute(data):
 
             # COMMAND: ADD
             elif data.GetParam(0).lower() == settings["commands"]["add"]:
-                queue.append({ 'user': data.GetParam(1).lower(), 'wagered': int(data.GetParam(3)), 'ign': str(data.GetParam(2)), 'time': time.time() })
+                if data.GetParam(1) == 'queue':
+                    queue.append({ 'user': data.GetParam(2).lower(), 'wagered': int(data.GetParam(4)), 'ign': str(data.GetParam(3)), 'time': time.time() })
+
+                elif data.GetParam(1) == 'playing':
+                    queue.append({ 'user': data.GetParam(2).lower(), 'wagered': int(data.GetParam(4)), 'ign': str(data.GetParam(3)), 'time': time.time() })
 
                 tempResponseString = settings["responseQueueModAdded"]
                 tempResponseString = tempResponseString.replace("$moderator", user)
-                tempResponseString = tempResponseString.replace("$player", data.GetParam(1).lower())
+                tempResponseString = tempResponseString.replace("$player", data.GetParam(2).lower())
                 Parent.SendTwitchMessage(tempResponseString)
 
             # COMMAND: REMOVE
             elif data.GetParam(0).lower() == settings["commands"]["remove"]:
-                index = find_index(queue, 'user', data.GetParam(1).lower())
-                del queue[index]
+
+                if data.GetParam(1) == 'queue':
+                    index = find_index(queue, 'user', data.GetParam(2).lower())
+                    del queue[index]
+
+                elif data.GetParam(1) == 'playing':
+                    index = find_index(playing, 'user', data.GetParam(2).lower())
+                    del queue[index]
 
                 tempResponseString = settings["responseQueueModRemove"]
                 tempResponseString = tempResponseString.replace("$moderator", user)
-                tempResponseString = tempResponseString.replace("$player", data.GetParam(1).lower())
+                tempResponseString = tempResponseString.replace("$player", data.GetParam(2).lower())
                 Parent.SendTwitchMessage(tempResponseString)
 
             # COMMAND: ACCEPT
             elif data.GetParam(0).lower() == settings["commands"]["accept"]:
                 index = find_index(queue, 'user', data.GetParam(1).lower())
 
+                # Remove points from player
+                Parent.RemovePoints(queue[index]["user"], queue[index]["wagered"])
+
+                # Remove from queue and add to playing
                 playing.append(queue[index])
                 del queue[index]
 
@@ -214,18 +244,18 @@ def Execute(data):
 
             # COMMAND: LIST
             if data.GetParam(0).lower() == settings["commands"]["list"]:
-                if len(queue) == 0:
-                    tempResponseString = settings["responseQueueEmpty"]
-
-                else:
-                    if len(playing) > 0:
-                        tempResponseString += "/me Currently Playing:\n"
-                        for index, entry in enumerate(playing):
-                            tempResponseString += "/me {i}. {p} [{g}] [{w}]\n".format(i=index+1, p=entry["user"], w=entry["wagered"], g=entry["ign"])
-
+                if len(queue) > 0:
                     tempResponseString += "\n/me Waiting Queue:\n"
                     for index, entry in enumerate(queue):
                         tempResponseString += "/me {i}. {p} [{g}] [{w}]\n".format(i=index+1, p=entry["user"], w=entry["wagered"], g=entry["ign"])
+
+                if len(playing) > 0:
+                    tempResponseString += "/me Currently Playing:\n"
+                    for index, entry in enumerate(playing):
+                        tempResponseString += "/me {i}. {p} [{g}] [{w}]\n".format(i=index+1, p=entry["user"], w=entry["wagered"], g=entry["ign"])
+
+                else:
+                    tempResponseString = settings["responseQueueEmpty"]
 
                 tempResponseString = tempResponseString.replace("$user", user)
                 Parent.SendTwitchMessage(tempResponseString)
@@ -250,10 +280,10 @@ def Execute(data):
                         tempResponseString = settings["responseNotEnoughPoints"]
 
                     else:
-                        if (delta > 0):
-                            Parent.RemovePoints(user, delta)
-                        elif (delta < 0):
-                            Parent.AddPoints(user, delta)
+                        # if (delta > 0):
+                        #     Parent.RemovePoints(user, delta)
+                        # elif (delta < 0):
+                        #     Parent.AddPoints(user, delta)
 
                         queue[index]["wagered"] = wagered
 
@@ -338,4 +368,12 @@ def OpenReadMe():
 #	[Required] Tick Function
 #---------------------------------------
 def Tick():
+    # global iteration
+    #
+    # iteration += 1
+    #
+    # if iteration % 10 == 0:
+    #     with io.open('./data.json', 'w', encoding='utf-8') as f:
+    #         f.write(json.dumps({ 'queue': queue, 'one': 'two' }, ensure_ascii=False))
+
     return
