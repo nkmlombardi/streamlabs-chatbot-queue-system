@@ -43,6 +43,9 @@ defaultSettings = {
         "start": "!start",
         "end": "!end",
         "pause": "!pause",
+        "save": "!save",
+        "load": "!load",
+        "clear": "!clear",
         "join": "!join",
         "list": "!list",
         "wager": "!wager",
@@ -61,13 +64,20 @@ defaultSettings = {
     "userCooldown": 0,
     "onUserCooldown": "$user the command is still on user cooldown for $cd seconds!",
 
-    "responseQueueStarted": "/me @$moderator has began a queue for $title!",
-    "responseQueueEnded": "/me @$moderator has ended a queue for $title!",
+    "responseQueueModStarted": "/me @$moderator has started the $title queue!",
+    "responseQueueModEnded": "/me @$moderator has ended the $title queue!",
+    "responseQueueModCleared": "/me @$moderator has cleared the $title queue!",
 
     "responseQueueModAdded": "/me @$player was added to the queue by @$moderator",
     "responseQueueModRemove": "/me @$player was removed from the queue by @$moderator",
     "responseQueueModAccept": "/me @$player was accepted to play by @$moderator",
     "whisperQueueModAccept": "/w $player It is your turn to play! Please make sure you have sent a friend request in-game to $host.",
+    "responseLoadFailed": "/me $user failed to load specified $file.",
+    "responseLoadSuccess": "/me $user successfully loaded $file",
+    "responseLoadArgMissing": "/me $user Please provide a name for queue to be loaded.",
+    "responseSaveFailed": "/me $user failed to save specified $file",
+    "responseSaveSuccess": "/me $user successfully saved $file",
+    "responseSaveArgMissing": "/me $user Please provide a name for the saved queue.",
 
     "responseWagerChanged": "/me @$user has changed their wager to $wagered $currency and moved to position #$index in the queue",
     "responseQueueEmpty": "/me @$user The queue is currently empty.",
@@ -157,7 +167,7 @@ def Execute(data):
             # COMMAND: START
             if data.GetParam(0).lower() == settings["commands"]["start"]:
                 active = True
-                tempResponseString = settings["responseQueueStarted"]
+                tempResponseString = settings["responseQueueModStarted"]
                 tempResponseString = tempResponseString.replace("$moderator", user)
                 tempResponseString = tempResponseString.replace("$title", settings['title'])
                 Parent.SendTwitchMessage(tempResponseString)
@@ -165,7 +175,7 @@ def Execute(data):
             # COMMAND: PAUSE
             elif active and data.GetParam(0).lower() == settings["commands"]["pause"]:
                 active = False
-                tempResponseString = settings["responseQueueEnded"]
+                tempResponseString = settings["responseQueueModEnded"]
                 tempResponseString = tempResponseString.replace("$moderator", user)
                 tempResponseString = tempResponseString.replace("$title", settings['title'])
                 Parent.SendTwitchMessage(tempResponseString)
@@ -177,10 +187,78 @@ def Execute(data):
                 queue = []
                 playing = []
 
-                tempResponseString = settings["responseQueueEnded"]
+                tempResponseString = settings["responseQueueModEnded"]
                 tempResponseString = tempResponseString.replace("$moderator", user)
                 tempResponseString = tempResponseString.replace("$title", settings['title'])
                 Parent.SendTwitchMessage(tempResponseString)
+
+
+            # COMMAND: CLEAR
+            elif data.GetParam(0).lower() == settings["commands"]["clear"]:
+                if data.GetParam(1).lower() == 'queue':
+                    queue = []
+
+                elif data.GetParam(1).lower() == 'playing':
+                    playing = []
+
+                else:
+                    queue = []
+                    playing = []
+
+                tempResponseString = settings["responseQueueModCleared"]
+                tempResponseString = tempResponseString.replace("$moderator", user)
+                tempResponseString = tempResponseString.replace("$title", settings['title'])
+                Parent.SendTwitchMessage(tempResponseString)
+
+
+            # COMMAND: SAVE
+            elif data.GetParam(0).lower() == settings["commands"]["save"]:
+                path = os.path.dirname(__file__)
+
+                if not data.GetParam(1):
+                    tempResponseString = settings["responseSaveArgMissing"]
+
+                else:
+                    try:
+                        with io.open(os.path.join(os.path.dirname(__file__), data.GetParam(1) + ".json"), 'w', encoding='utf-8') as f:
+                            f.write(json.dumps({ 'queue': queue, 'playing': playing }, ensure_ascii=False))
+
+                    except:
+                        tempResponseString = settings["responseSaveFailed"]
+
+                    else:
+                        tempResponseString = settings["responseSaveSuccess"]
+
+                tempResponseString = tempResponseString.replace("$user", user)
+                tempResponseString = tempResponseString.replace("$file", data.GetParam(1))
+                Parent.SendTwitchMessage(tempResponseString)
+
+
+            # COMMAND: LOAD
+            elif data.GetParam(0).lower() == settings["commands"]["load"]:
+                active = False
+                path = os.path.dirname(__file__)
+
+                if not data.GetParam(1):
+                    tempResponseString = settings["responseLoadArgMissing"]
+
+                try:
+                    with codecs.open(os.path.join(path, data.GetParam(1) + '.json'), encoding='utf-8-sig', mode='r') as file:
+                        importedData = json.load(file, encoding='utf-8-sig')
+                        tempResponseString = settings["responseLoadSuccess"]
+
+                except:
+                    tempResponseString = settings["responseLoadFailed"]
+
+                else:
+                    queue = importedData["queue"]
+                    playing = importedData["playing"]
+
+                tempResponseString = tempResponseString.replace("$user", user)
+                tempResponseString = tempResponseString.replace("$file", data.GetParam(1))
+                Parent.SendTwitchMessage(tempResponseString)
+
+
 
             # COMMAND: ADD
             elif data.GetParam(0).lower() == settings["commands"]["add"]:
@@ -249,7 +327,7 @@ def Execute(data):
                     for index, entry in enumerate(queue):
                         tempResponseString += "/me {i}. {p} [{g}] [{w}]\n".format(i=index+1, p=entry["user"], w=entry["wagered"], g=entry["ign"])
 
-                if len(playing) > 0:
+                elif len(playing) > 0:
                     tempResponseString += "/me Currently Playing:\n"
                     for index, entry in enumerate(playing):
                         tempResponseString += "/me {i}. {p} [{g}] [{w}]\n".format(i=index+1, p=entry["user"], w=entry["wagered"], g=entry["ign"])
@@ -368,12 +446,12 @@ def OpenReadMe():
 #	[Required] Tick Function
 #---------------------------------------
 def Tick():
-    # global iteration
-    #
-    # iteration += 1
-    #
-    # if iteration % 10 == 0:
-    #     with io.open('./data.json', 'w', encoding='utf-8') as f:
-    #         f.write(json.dumps({ 'queue': queue, 'one': 'two' }, ensure_ascii=False))
+    global iteration
+
+    iteration += 1
+
+    if iteration % 10 == 0:
+        with io.open(os.path.join(os.path.dirname(__file__), "autosave.json"), 'w', encoding='utf-8') as f:
+            f.write(json.dumps({ 'queue': queue, 'playing': playing }, ensure_ascii=False))
 
     return
